@@ -1,0 +1,28 @@
+问题根源在于 index.html 的存放位置不正确。Spring Boot 默认的静态资源目录是：
+
+src/main/resources/static/
+
+src/main/resources/public/
+
+src/main/resources/resources/
+
+src/main/resources/META-INF/resources/
+
+而您将文件放在了 src/main/resources/webapp/static/index.html，这个路径不在默认扫描范围内，因此返回 404
+
+docker build -t order-service:latest .
+
+docker run -d --name order-service --network hadoop --ip 172.19.0.14 -p 8090:8090 -p 9090:9090 -e NACOS_NAMESPACE=051c1cce-2566-4887-a9a4-d9455b64d6d8 -e SERVICE_NAME=order-service-dev -e AGENT_PORT=9090 -e NACOS_SERVER=172.19.0.13:8848 -e APP_VERSION=1.0.0 -e NACOS_USERNAME=MyServerIdentityKey -e NACOS_PASSWORD=MyUniqueServerIdentityValue order-service:latest
+
+
+docker run -d --name order-service --network hadoop \
+  -p 8080:8080 -p 9090:9090 \
+  -e NACOS_NAMESPACE=051c1cce-2566-4887-a9a4-d9455b64d6d8 \
+  -e SERVICE_NAME=order-service-dev \
+  -e AGENT_IP=host.docker.internal \         # 或宿主机 IP
+  -e AGENT_PORT=9090 \
+  -e NACOS_SERVER=172.19.0.13:8848 \
+  -e APP_VERSION=1.0.0 \
+  -e NACOS_ACCESS_TOKEN=你的token \
+  order-service:latest
+

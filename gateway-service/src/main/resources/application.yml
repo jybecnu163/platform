@@ -1,0 +1,24 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true               # 开启根据服务发现自动生成路由
+          lower-case-service-id: true # 路由路径转为小写（习惯规范）
+    nacos:
+      discovery:
+        server-addr: 172.19.0.13:8848   # 推荐不加 http://
+        namespace: 051c1cce-2566-4887-a9a4-d9455b64d6d8
+        username: MyServerIdentityKey
+        password: MyUniqueServerIdentityValue
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

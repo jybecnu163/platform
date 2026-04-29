@@ -1,0 +1,14 @@
+﻿server:
+  port: 8081
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  thymeleaf:
+    prefix: classpath:/templates/   # 默认值，可以省略
+    cache: false
+
+file:
+  upload-dir: ./uploads

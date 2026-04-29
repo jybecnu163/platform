@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:mysql://172.19.0.8:3306/cmdb?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: pass
+nacos:
+  server-addr: 172.19.0.13:8848   # 推荐不加 http://
+#  namespace: 051c1cce-2566-4887-a9a4-d9455b64d6d8 # 从表中获取
+  username: MyServerIdentityKey
+  password: MyUniqueServerIdentityValue
+  # 如果需要认证可配置如下
+  # username: nacos
+  # password: nacos
+  # access-token: your-token

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 服务测试工具 | 升级/回滚/健康检查</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 30px 20px;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 24px 28px;
+            margin-bottom: 28px;
+            transition: box-shadow 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+        .sub {
+            color: #475569;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+            font-size: 0.9rem;
+        }
+        .config-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 16px 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+        .config-bar label {
+            font-weight: 500;
+            color: #0f172a;
+        }
+        .config-bar input {
+            flex: 2;
+            min-width: 240px;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            background: white;
+            transition: 0.2s;
+        }
+        .config-bar input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            background: #e2e8f0;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            font-family: monospace;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            background: #fff;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        button {
+            background: #f1f5f9;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #1e293b;
+        }
+        button.primary {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        button.primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        button.danger {
+            background: #ef4444;
+            color: white;
+        }
+        button.danger:hover {
+            background: #dc2626;
+        }
+        button.secondary {
+            background: #facc15;
+            color: #422006;
+        }
+        button.secondary:hover {
+            background: #eab308;
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        .result-box {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 20px;
+            padding: 18px 22px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            margin-top: 20px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .status-line {
+            margin-bottom: 8px;
+            display: flex;
+            gap: 16px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .status-badge {
+            display: inline-block;
+            background: #334155;
+            padding: 2px 8px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+        .health-up {
+            background: #22c55e;
+            color: #14532d;
+        }
+        .health-down {
+            background: #ef4444;
+            color: #ffffff;
+        }
+        hr {
+            margin: 20px 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, #e2e8f0, transparent);
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 40px;
+        }
+        @media (max-width: 650px) {
+            .card { padding: 18px; }
+            .config-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <h1>🧪 Agent 服务测试面板</h1>
+        <div class="sub">测试接口：/health (GET) 、/execute/upgrade (POST) 、/execute/rollback (POST)</div>
+
+        <!-- 服务地址配置 -->
+        <div class="config-bar">
+            <label>🌐 Agent 服务地址：</label>
+            <input type="text" id="baseUrl" value="http://localhost:9091" placeholder="http://ip:port">
+            <span style="font-size:0.75rem; color:#475569;">示例: http://192.168.1.100:9090</span>
+        </div>
+
+        <!-- 1. 健康检查 /health -->
+        <div class="section-title">
+            ❤️ 健康检查 <span class="badge">GET /health</span>
+        </div>
+        <div class="button-group">
+            <button id="healthBtn" class="primary">🩺 获取健康状态</button>
+        </div>
+        <div id="healthResult" class="result-box" style="display: none;">
+            <!-- 动态填充 -->
+        </div>
+
+        <hr>
+
+        <!-- 2. 升级 /execute/upgrade -->
+        <div class="section-title">
+            ⬆️ 升级服务 <span class="badge">POST /execute/upgrade</span>
+        </div>
+        <div class="form-group">
+            <label>📦 版本号 (version)</label>
+            <input type="text" id="upgradeVersion" placeholder="例: 1.0.3 或 2.0.0" value="1.0.3">
+        </div>
+        <div class="form-group">
+            <label>🔗 新包下载地址 (packageUrl)</label>
+            <input type="text" id="packageUrl" placeholder="http://your-server/order-service-1.0.3.jar" value="http://localhost:8081/download/order-service-1.0.3.jar">
+        </div>
+        <div class="button-group">
+            <button id="upgradeBtn" class="primary">🚀 发起升级 (异步)</button>
+        </div>
+        <div id="upgradeResult" class="result-box" style="display: none;"></div>
+
+        <hr>
+
+        <!-- 3. 回滚 /execute/rollback（服务端未完全实现，仅测试调用） -->
+        <div class="section-title">
+            ⏪ 回滚 <span class="badge">POST /execute/rollback</span>
+            <span style="font-size:0.7rem; background:#fee2e2; padding:2px 8px; border-radius:40px;">⚠️ 服务端当前返回 501</span>
+        </div>
+        <div class="button-group">
+            <button id="rollbackBtn" class="secondary">🔄 调用回滚接口</button>
+        </div>
+        <div id="rollbackResult" class="result-box" style="display: none;"></div>
+
+        <div class="footer">
+            💡 提示：/upgrade 为异步接口，正常应返回 202 Accepted；/rollback 目前服务端未实现，会收到 501 错误。
+        </div>
+    </div>
+</div>
+
+<script>
+    // DOM 元素
+    const baseUrlInput = document.getElementById('baseUrl');
+    const healthBtn = document.getElementById('healthBtn');
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    const rollbackBtn = document.getElementById('rollbackBtn');
+
+    const healthResultDiv = document.getElementById('healthResult');
+    const upgradeResultDiv = document.getElementById('upgradeResult');
+    const rollbackResultDiv = document.getElementById('rollbackResult');
+
+    // 通用请求函数: 显示结果到指定 div
+    async function callApi(method, endpoint, body = null, resultDiv) {
+        let base = baseUrlInput.value.trim();
+        if (!base) base = 'http://localhost:9090';
+        // 去除末尾多余斜杠
+        base = base.replace(/\/$/, '');
+        const url = `${base}${endpoint}`;
+
+        // 显示加载状态
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<span style="color:#94a3b8;">⏳ 请求中 → ${method} ${url}</span>`;
+
+        const options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        };
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+
+        try {
+            const startTime = Date.now();
+            const response = await fetch(url, options);
+            const elapsed = Date.now() - startTime;
+
+            let responseData = null;
+            let textData = null;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                responseData = await response.json();
+            } else {
+                textData = await response.text();
+            }
+
+            // 构造结果展示
+            let statusHtml = `<div class="status-line">
+                <span class="status-badge" style="background:#1e293b;">状态码</span>
+                <span style="font-weight:bold; color:${response.ok ? '#86efac' : '#f87171'}">${response.status} ${response.statusText}</span>
+                <span class="status-badge">耗时 ${elapsed}ms</span>
+            </div>`;
+
+            let bodyHtml = '';
+            if (responseData) {
+                bodyHtml = `<div style="margin-top:12px;"><span class="status-badge">响应体 (JSON)</span>
+                <pre style="background:#1e293b; padding:12px; border-radius:14px; overflow-x:auto; margin-top:8px;">${JSON.stringify(responseData, null, 2)}</pre></div>`;
+            } else if (textData) {
+                bodyHtml = `<div style="margin-top:12px;"><span class="status-badge">响应体 (Text)</span>
+                <pre style="background:#1e293b; padding:12px; border-radius:14px; margin-top:8px;">${escapeHtml(textData)}</pre></div>`;
+            }
+
+            resultDiv.innerHTML = statusHtml + bodyHtml;
+
+            // 如果是健康检查并且有 status 字段，可额外高亮展示状态
+            if (endpoint === '/health' && responseData && responseData.status) {
+                const extraBadge = responseData.status === 'UP'
+                    ? '<span style="background:#22c55e; color:#14532d; padding:2px 12px; border-radius:40px; margin-left:12px;">✅ 业务进程健康</span>'
+                    : '<span style="background:#ef4444; color:white; padding:2px 12px; border-radius:40px; margin-left:12px;">❌ 业务进程异常</span>';
+                resultDiv.innerHTML = statusHtml + bodyHtml + `<div style="margin-top:12px;">${extraBadge}</div>`;
+            }
+
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="status-line"><span class="status-badge" style="background:#7f1a1a;">❌ 请求失败</span></div>
+            <div style="color:#fca5a5;">${escapeHtml(error.message)}</div>
+            <div style="font-size:0.7rem; margin-top:8px;">请检查服务地址是否正确、服务是否允许跨域(CORS)或网络连通性。</div>`;
+        }
+    }
+
+    // 辅助：转义 HTML
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // 健康检查
+    healthBtn.addEventListener('click', () => {
+        callApi('GET', '/health', null, healthResultDiv);
+    });
+
+    // 升级
+    upgradeBtn.addEventListener('click', () => {
+        const version = document.getElementById('upgradeVersion').value.trim();
+        const packageUrl = document.getElementById('packageUrl').value.trim();
+        if (!version) {
+            alert('请填写版本号 (version)');
+            return;
+        }
+        if (!packageUrl) {
+            alert('请填写包下载地址 (packageUrl)');
+            return;
+        }
+        const payload = {
+            version: version,
+            packageUrl: packageUrl
+        };
+        callApi('POST', '/execute/upgrade', payload, upgradeResultDiv);
+    });
+
+    // 回滚
+    rollbackBtn.addEventListener('click', () => {
+        callApi('POST', '/execute/rollback', null, rollbackResultDiv);
+    });
+
+    // 可选：回车时保持体验
+    document.getElementById('packageUrl')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') upgradeBtn.click();
+    });
+    document.getElementById('upgradeVersion')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') upgradeBtn.click();
+    });
+
+    // 页面加载后默认展示帮助消息（不清空占位）
+    healthResultDiv.style.display = 'block';
+    healthResultDiv.innerHTML = '<span style="color:#94a3b8;">✨ 点击「获取健康状态」查看服务及业务进程情况</span>';
+    upgradeResultDiv.style.display = 'block';
+    upgradeResultDiv.innerHTML = '<span style="color:#94a3b8;">⬆️ 填写版本号和包地址后发起异步升级</span>';
+    rollbackResultDiv.style.display = 'block';
+    rollbackResultDiv.innerHTML = '<span style="color:#94a3b8;">⏪ 回滚接口尚未在服务端完整实现 (返回501)，可用于测试调用</span>';
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Jar 文件管理服务器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+        .upload-area {
+            background: #e9f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #d4edda;
+            color: #155724;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .btn {
+            display: inline-block;
+            padding: 5px 12px;
+            margin: 0 4px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .btn-download {
+            background-color: #2196F3;
+            color: white;
+        }
+        .btn-delete {
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-upload {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 20px;
+            font-size: 16px;
+        }
+        .btn-copy {
+            background-color: #ff9800;
+            color: white;
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        input[type="file"] {
+            padding: 8px;
+        }
+        .url-cell {
+            word-break: break-all;
+            max-width: 350px;
+            font-size: 12px;
+            color: #555;
+        }
+        .copy-success {
+            background-color: #4caf50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📁 Jar 文件服务器</h1>
+
+    <!-- 上传表单 -->
+    <div class="upload-area">
+        <form method="post" action="/upload" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <button type="submit" class="btn btn-upload">⬆️ 上传文件</button>
+        </form>
+    </div>
+
+    <!-- 提示消息 -->
+    <div th:if="${message}" class="message" th:text="${message}"></div>
+
+    <!-- 文件列表 -->
+    <h3>已存储的文件 (共 <span th:text="${files.size()}">0</span> 个)</h3>
+    <table th:if="${!files.isEmpty()}">
+        <thead>
+        <tr>
+            <th>文件名</th>
+            <th>文件 URL</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="file : ${files}">
+            <td>
+                <span th:text="${file}"></span>
+                <span class="file-size" th:if="${file.endsWith('.jar')}"> (Jar 文件)</span>
+            </td>
+            <td class="url-cell" th:attr="data-filename=${file}">
+                <!-- 动态生成 URL，稍后由 JavaScript 填充 -->
+                <span class="url-display" th:id="|url-${fileStat.index}|">加载中...</span>
+                <button class="btn btn-copy" th:data-clipboard-target="|#url-${fileStat.index}|" onclick="copyUrl(this)">📋 复制</button>
+            </td>
+            <td>
+                <a th:href="@{/download/{filename}(filename=${file})}" class="btn btn-download">⬇️ 下载</a>
+                <form method="post" th:action="@{/delete/{filename}(filename=${file})}" style="display:inline;">
+                    <button type="submit" class="btn btn-delete" onclick="return confirm('确认删除 ${file} ?')">🗑️ 删除</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p th:if="${files.isEmpty()}">暂无任何文件，请上传 Jar 文件。</p>
+    <footer>支持任意文件类型，默认上传目录: ./uploads</footer>
+</div>
+
+<script>
+    // 获取当前应用的基础 URL（协议 + 主机 + 端口 + 上下文路径）
+    function getBaseUrl() {
+        // 如果应用部署在根路径，则直接使用 origin
+        // 如果使用了 context-path，需要补充，当前示例未配置，所以直接使用 origin
+        return window.location.origin;
+    }
+
+    // 为所有文件生成下载链接并显示
+    function generateUrls() {
+        const base = getBaseUrl();
+        const rows = document.querySelectorAll('tr');
+        rows.forEach(row => {
+            const urlSpan = row.querySelector('.url-display');
+            if (urlSpan) {
+                // 通过 data-filename 获取文件名，或者通过行内的文件名文本
+                const filenameCell = row.querySelector('td:first-child span:first-child');
+                if (filenameCell) {
+                    let filename = filenameCell.innerText;
+                    // 构建下载链接 (需要 URL 编码)
+                    const downloadUrl = base + '/download/' + encodeURIComponent(filename);
+                    urlSpan.innerText = downloadUrl;
+                }
+            }
+        });
+    }
+
+    // 复制 URL 到剪贴板
+    function copyUrl(btn) {
+        // 找到同一行中的 .url-display span 的内容
+        const row = btn.closest('tr');
+        const urlSpan = row.querySelector('.url-display');
+        if (!urlSpan) return;
+
+        const url = urlSpan.innerText;
+        if (!url || url === '加载中...') return;
+
+        // 使用现代 Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                showCopySuccess(btn, '已复制');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                fallbackCopy(url, btn);
+            });
+        } else {
+            fallbackCopy(url, btn);
+        }
+    }
+
+    // 降级复制方案（使用 textarea）
+    function fallbackCopy(text, btn) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showCopySuccess(btn, '已复制');
+        } catch (err) {
+            console.error('降级复制失败:', err);
+            showCopySuccess(btn, '复制失败');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    // 显示短暂的成功提示
+    function showCopySuccess(btn, msg) {
+        const originalText = btn.innerText;
+        btn.innerText = msg;
+        setTimeout(() => {
+            btn.innerText = originalText;
+        }, 1500);
+    }
+
+    // 页面加载完成后生成 URL
+    window.addEventListener('DOMContentLoaded', generateUrls);
+</script>
+</body>
+</html>

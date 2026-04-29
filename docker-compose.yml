@@ -1,0 +1,51 @@
+version: '3.8'
+services:
+  mysql57:
+    image: mysql:5.7
+    container_name: mysql57
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+    networks:
+      hadoop:
+        ipv4_address: 172.19.0.8
+    # 若需要持久化数据，可取消下面 volumes 的注释（原命令未指定，故默认注释）
+    # volumes:
+    #   - mysql_data:/var/lib/mysql
+
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    container_name: nacos
+    privileged: true
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "true"
+      NACOS_AUTH_TOKEN: 8b92c609089f74db3c5ee04bd7d4d89e
+      NACOS_AUTH_IDENTITY_KEY: MyServerIdentityKey
+      NACOS_AUTH_IDENTITY_VALUE: MyUniqueServerIdentityValue
+      JVM_XMS: 128m
+      JVM_XMX: 128m
+      JVM_XMN: 64m
+    volumes:
+      - D:/dockerBuilder/nacos/nacos/conf/:/home/nacos/conf
+      - D:/dockerBuilder/nacos/nacos/logs/:/home/nacos/logs
+      - D:/dockerBuilder/nacos/nacos/data/:/home/nacos/data
+    networks:
+      hadoop:
+        ipv4_address: 172.19.0.13
+
+networks:
+  hadoop:
+    name: hadoop
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16          # 根据固定IP推断的子网范围，请根据实际网络调整
+          gateway: 172.19.0.1            # 网关通常为 .1，若不符请修改
+    # 若 hadoop 网络已存在（外部网络），可将以下 external 取消注释并删除上方的 ipam 配置
+    # external: true
