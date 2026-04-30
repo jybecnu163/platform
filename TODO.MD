@@ -7,8 +7,10 @@
 
 ## 2. Agent（Go）
 完善 main.go：合并最新版本（先启动 Java 再注册 Nacos、进程监控与自愈）  √
-实现 /execute/upgrade 完整逻辑：下载 jar、优雅关闭旧进程、启动新进程、健康检查、更新 Nacos 元数据   √
-实现 /execute/rollback 逻辑：支持回滚到上一版本（预留制品下载接口） √
+正常启动逻辑：启动 Java 业务进程、等待并检测health、启动 HTTP 指令端口、注册nacos  √
+实现 /execute/upgrade 完整逻辑：自检状态、下载新版本、摘流等待、停止旧进程、启动新进程、等待新进程就绪（失败后回退）、恢复流量、更新 Nacos 版本信息   √
+实现 /execute/rollback 逻辑：自检状态、使用旧版本号更新   √
+
 增加 Agent 自身优雅退出（SIGTERM 时主动摘除 Nacos 并退出）  √
 添加指令端口安全校验（可选 Token）
 编写 Dockerfile（将 Agent 与业务 jar 打包，使用 entrypoint 启动 Agent） √
@@ -30,13 +32,15 @@
 ## 4. Portal（React）
 完善环境详情页 EnvironmentList（从后端获取数据展示）
 完善发布表单 DeployForm：√
-版本下拉列表（自动联想 + 手动输入）
-根据环境自动加载部署策略
+    版本下拉列表（自动联想 + 手动输入）
+    根据环境自动加载部署策略
+部署策略
 提交调用 POST /api/deployments  √
 实现发布历史页面 DeployHistory，支持按应用/环境筛选，展示状态机流转
 实现一键回滚按钮（仅在允许回滚的任务行显示）
 集成权限与审批流（至少前端控制，生产操作二次确认）
 优化 UI/UX（加载状态、错误提示、空数据占位）
+机器列表页：名称、ip、状态等
 
 ## 5. 网关服务
 自动发现

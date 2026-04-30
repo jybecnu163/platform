@@ -41,3 +41,4 @@ multi-ai-chat.html
 *.ps1
 
 .github
+*.notice
